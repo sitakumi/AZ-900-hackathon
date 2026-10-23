@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AZ-900 Study Buddy (Unofficial)</title>
+<style>
+:root{--bg:#faf7f0;--fg:#1d2a1f;--mute:#5d6b5f;--card:#fff;--line:#dfd8c6;--acc:#2f7d4f;--on:#fff;--bad:#b3402a;--good:#2f7d4f;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a15;--fg:#eaf0e6;--mute:#9db0a0;--card:#1d261f;--line:#2f3b31;--acc:#5cc088;--on:#0f1a12;--bad:#ef8a73;--good:#5cc088;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141a15;--fg:#eaf0e6;--mute:#9db0a0;--card:#1d261f;--line:#2f3b31;--acc:#5cc088;--on:#0f1a12;--bad:#ef8a73;--good:#5cc088;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:0 0 4px}.badge{display:inline-block;font-size:.75rem;color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:2px 10px}
+nav{display:flex;gap:6px;margin:14px 0}nav button{flex:1}
+button,select,textarea{font:inherit;color:var(--fg)}
+button{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+button.on,button.pri{background:var(--acc);color:var(--on);border-color:var(--acc);font-weight:600}
+button:disabled{opacity:.6}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chips button{padding:6px 12px;border-radius:99px;font-size:.88rem}
+select,textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px}
+label{font-size:.82rem;color:var(--mute);display:block;margin-top:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}
+.card h3{margin:0 0 4px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--acc)}.card p{margin:0}
+.mute{color:var(--mute)}.err{color:var(--bad)}
+.opt{display:block;width:100%;text-align:left;margin:8px 0}.opt.good{border-color:var(--good);border-width:2px}.opt.bad{border-color:var(--bad);border-width:2px}
+.why{font-size:.88rem;color:var(--mute);margin:-2px 4px 6px}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}
+.big{font-size:2.4rem;font-weight:700;color:var(--acc);margin:0}
+[hidden]{display:none!important}
+</style></head><body><main>
+<h1>AZ-900 Study Buddy</h1>
+<span class="badge">Unofficial · not affiliated with Microsoft</span>
+<nav><button data-t="learn" class="on">Learn</button><button data-t="quiz">Quiz</button><button data-t="prog">Progress</button></nav>
+<label>Topic (from the public AZ-900 skills outline)</label><div class="chips" id="chips"></div>
+<label for="lang">Explain in</label><select id="lang"></select>
+
+<section id="learn">
+<label for="q">Ask anything (optional)</label>
+<textarea id="q" rows="2" placeholder="e.g. What is the shared responsibility model?"></textarea>
+<p><button class="pri" id="go">Explain it simply</button></p>
+<div id="out"></div>
+</section>
+
+<section id="quiz" hidden>
+<p><button class="pri" id="nq">New question</button></p>
+<div id="qbox"><p class="mute">Questions are written fresh by AI for the topic you picked.</p></div>
+</section>
+
+<section id="prog" hidden>
+<div id="pbox"></div>
+<p><button id="weak">Practise my weakest topic</button> <button id="reset">Reset</button></p>
+</section>
+<p class="mute" style="font-size:.78rem">AI can make mistakes. Always confirm details on Microsoft Learn.</p>
+</main>
+<script>
+const T=["Cloud concepts","Azure architecture","Compute & networking","Security & identity","Governance & cost"];
+const L=["English","Kiswahili","Hausa","Yorùbá","isiZulu","Français","Nigerian Pidgin"];
+let topic=T[0],lang=L[0],S={};
+try{S=JSON.parse(localStorage.getItem("az900")||"{}")}catch(e){}
+const save=()=>{try{localStorage.setItem("az900",JSON.stringify(S))}catch(e){}};
+const $=s=>document.querySelector(s);
+function el(t,x,c){const e=document.createElement(t);if(x!=null)e.textContent=x;if(c)e.className=c;return e}
+function card(h,t){const d=el("div",null,"card");d.append(el("h3",h),el("p",t));return d}
+const BACKEND_URL="https://dholbxqsbukzeiouaokj.supabase.co/functions/v1/study-buddy";
+const ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRob2xieHFzYnVremVpb3Vhb2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3Nzk4MjUsImV4cCI6MjEwODM1NTgyNX0.8zdntH88tHQQpeXSttvCdu2f179ZABlN6c2xwUpAU78";
+async function ask(body){
+const r=await fetch(BACKEND_URL,{method:"POST",headers:{"content-type":"application/json","apikey":ANON_KEY,"authorization":"Bearer "+ANON_KEY},body:JSON.stringify(body)});
+if(!r.ok)throw{code:"http",status:r.status};
+return (await r.json()).result}
+function fail(box,e){box.replaceChildren(el("p",e&&e.status===429?"Too many requests. Please wait a moment.":"The buddy is unavailable right now. Please try again.","err"))}
+const RULES='You are an unofficial AZ-900 (Microsoft Azure Fundamentals) study buddy for beginners, not affiliated with Microsoft. Use only the public AZ-900 skills outline. Never reproduce real exam questions. If unsure of a detail, say so; never invent service names, limits or prices.';
+
+function chips(){const c=$("#chips");c.replaceChildren(...T.map(t=>{const b=el("button",t,t===topic?"on":"");b.onclick=()=>{topic=t;chips()};return b}))}
+chips();
+$("#lang").replaceChildren(...L.map(l=>el("option",l)));$("#lang").onchange=e=>lang=e.target.value;
+function show(t){["learn","quiz","prog"].forEach(i=>$("#"+i).hidden=i!==t);document.querySelectorAll("nav button").forEach(b=>b.className=b.dataset.t===t?"on":"");if(t==="prog")prog()}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>show(b.dataset.t));
+
+$("#go").onclick=async()=>{const box=$("#out"),b=$("#go");b.disabled=true;box.replaceChildren(el("p","Thinking…","mute"));
+try{const q=$("#q").value.trim();
+const r=await ask({mode:"learn",topic,lang,q});
+box.replaceChildren(card("Plain explanation",r.explanation),card("Real-life example",r.example),card("Exam tip",r.exam_tip),card("Check yourself",r.check_question))}
+catch(e){fail(box,e)}b.disabled=false};
+
+async function newQ(){const box=$("#qbox"),b=$("#nq");b.disabled=true;box.replaceChildren(el("p","Writing a question…","mute"));
+try{const r=await ask({mode:"quiz",topic,lang});
+if(!Array.isArray(r.options)||r.options.length!==4||!(r.answer>=0&&r.answer<4))throw{};
+const d=el("div"),btns=[];d.append(el("p",r.question));
+r.options.forEach((o,i)=>{const x=el("button","ABCD"[i]+". "+o,"opt");btns.push(x);d.append(x);
+x.onclick=()=>{btns.forEach((y,j)=>{y.disabled=true;if(j===r.answer)y.classList.add("good");else if(j===i)y.classList.add("bad");y.after(el("p",(r.explanations||[])[j]||"","why"))});
+const s=S[topic]||{a:0,c:0};s.a++;if(i===r.answer)s.c++;S[topic]=s;save();
+d.append(el("p",i===r.answer?"Correct!":"Not quite. The right answer is "+"ABCD"[r.answer]+".",i===r.answer?"":"err"))}});
+box.replaceChildren(d)}catch(e){fail(box,e)}b.disabled=false}
+$("#nq").onclick=newQ;
+
+function prog(){const box=$("#pbox");let sum=0;const rows=T.map(t=>{const s=S[t]||{a:0,c:0},acc=s.a?s.c/s.a:0;sum+=acc*Math.min(1,s.a/5);
+const d=el("div",null,"card");d.append(el("h3",t),el("p",s.a?`${s.c}/${s.a} correct (${Math.round(acc*100)}%)`:"Not started","mute"));const b=el("div",null,"bar"),i=el("i");i.style.width=Math.round(acc*100)+"%";b.append(i);d.append(b);return d});
+const r=Math.round(sum/T.length*100),d=el("div",null,"card");
+d.append(el("h3","Readiness"),el("p",r+"%","big"),el("p",r>=80?"Looking ready. Keep a few mock rounds going.":r>=60?"Getting close. Tighten up your weaker topics.":"Keep practising. Aim for 5+ questions per topic.","mute"));
+box.replaceChildren(d,...rows)}
+$("#weak").onclick=()=>{let w=T[0],m=2;T.forEach(t=>{const s=S[t]||{a:0,c:0},a=s.a?s.c/s.a:-1;if(a<m){m=a;w=t}});topic=w;chips();show("quiz");newQ()};
+$("#reset").onclick=()=>{S={};save();prog()};
+</script></body></html>
